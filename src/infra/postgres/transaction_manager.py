@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from src.infra.postgres.pg import async_session_factory
+from src.infra.postgres.storage.author import AuthorStorage
 from src.infra.postgres.storage.book import BookStorage
 
 TExc = TypeVar("TExc", bound=BaseException)
@@ -18,6 +19,7 @@ class TransactionManager:
     session: AsyncSession
     session_factory: async_sessionmaker[AsyncSession]
     transaction: AsyncSessionTransaction
+    author: AuthorStorage
     book: BookStorage
 
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
@@ -25,6 +27,7 @@ class TransactionManager:
 
     async def __aenter__(self) -> Self:
         self.session = self.session_factory()
+        self.author = AuthorStorage(self.session)
         self.book = BookStorage(self.session)
         self.transaction: AsyncSessionTransaction = await self.session.begin()
         return self
