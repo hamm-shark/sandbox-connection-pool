@@ -68,6 +68,16 @@ class ClientCallController:
             await self.call_billing()
             return books
 
+    async def worker_for_update(
+        self,
+    ) -> list[Book]:
+        async with transaction() as session:
+            books = await self.read_books(session=session)
+            await self.sync_books(session=session, books=books)
+            books = await self.read_books(session=session)
+            await self.session_commit(session=session)
+            return books
+
     async def update_books_status(self, *, session: AsyncSession, books: list[Book]) -> None:
         available_statuses = list(BookStatus)
         for book in books:
@@ -92,7 +102,6 @@ class ClientCallController:
                 detail="Payment service is unavailable",
             ) from err
         await self.update_books_status(session=session, books=books)
-        await self.session_commit(session=session)
 
     async def seed_authors_with_books(
         self,
