@@ -44,7 +44,7 @@ async def run_migrations_online() -> None:
         get_settings(AppSettings).db.dsn,
         poolclass=pool.NullPool,
         future=True,
-        connect_args={"timeout": 10},
+        connect_args={"connect_timeout": 10},
     )
 
     async with connectable.connect() as connection:

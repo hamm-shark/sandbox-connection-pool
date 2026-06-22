@@ -5,36 +5,23 @@ from fastapi import Depends
 
 from src.infra.postgres.transaction_manager import PostgresTrManagerDep
 from src.modules.base.controller import BaseController
-from src.modules.books.schemas import BookResponse
+from src.modules.books.schemas import BookCreateRequest, BookResponse
 
 
 class BookController(BaseController):
     async def read_books(self) -> list[BookResponse]:
-        return await self.tr_manager.book.read_books()
+        async with self.tr_manager as mng:
+            return await mng.book.read_books()
 
-    # async def create_book(self, body: BookCreateRequest) -> BookResponse:
-    #     author_ids = await self.tr_manager.author.add_authors(body.authors)
-    #     result = await self.tr_manager.session.execute(select(Author).where(Author.id.in_(author_ids)))
-    #     authors_by_id = {author.id: author for author in result.scalars().all()}
-    #     missing_ids = [author_id for author_id in author_ids if author_id not in authors_by_id]
-    #
-    #     for author_id in missing_ids:
-    #         # Request contains only author ids, so create a placeholder name for new records.
-    #         author = Author(id=author_id, name=f"Author {author_id}")
-    #         self.tr_manager.session.add(author)
-    #         authors_by_id[author_id] = author
-    #
-    #     authors = [authors_by_id[author_id] for author_id in author_ids]
-    #
-    #     book = await self.tr_manager.book.create(
-    #         Book(
-    #             title=body.title,
-    #             genre=body.genre,
-    #             status=BookStatus.CREATED,
-    #             authors=authors,
-    #         ),
-    #     )
-    #     return BookResponse.model_validate(book)
+    async def create_book(self, body: BookCreateRequest) -> BookResponse:
+        async with self.tr_manager as mng:
+            book = await mng.book.create(data=body)
+        return BookResponse(
+            id=book.id,
+            title=book.title,
+            genre=book.genre,
+            authors=[author.id for author in book.authors],
+        )
 
 
 async def get_controller(tr_manager: PostgresTrManagerDep) -> AsyncIterator[BookController]:

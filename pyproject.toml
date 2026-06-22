@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings (>=2.14.2,<3.0.0)",
     "psycopg-binary (>=3.3.4,<4.0.0)",
     "psycopg (>=3.3.4,<4.0.0)",
+    "greenlet (>=3.5.2,<4.0.0)",
 
 ]
 
@@ -67,7 +68,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
-    "src/infra/postgres/alembic",
+    "src/infra/postgres/migrations",
 ]
 line-length = 120
 target-version = "py312"

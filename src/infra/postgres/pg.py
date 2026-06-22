@@ -15,7 +15,7 @@ from src.main.app_config import AppSettings, get_settings
 engine: AsyncEngine = create_async_engine(
     get_settings(AppSettings).db.dsn,
     echo=get_settings(AppSettings).db.ECHO,
-    connect_args={"timeout": get_settings(AppSettings).db.TIMEOUT},
+    connect_args={"connect_timeout": get_settings(AppSettings).db.TIMEOUT},
     poolclass=AsyncAdaptedQueuePool,
     pool_size=5,
     max_overflow=10,

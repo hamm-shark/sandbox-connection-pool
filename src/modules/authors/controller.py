@@ -14,7 +14,8 @@ class AuthorController(BaseController):
             return await mng.author.read_authors()
 
     async def create_author(self, data: AuthorCreateRequest) -> AuthorResponse:
-        author = await self.tr_manager.author.create(data.name)
+        async with self.tr_manager as mng:
+            author = await mng.author.create(data.name)
         return AuthorResponse.model_validate(author)
 
 

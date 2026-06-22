@@ -2,10 +2,11 @@ from uuid import UUID
 
 from sqlalchemy import select
 
+from src.infra.postgres.models import Author
 from src.infra.postgres.models.book import Book
 from src.infra.postgres.storage.base_storage import PostgresStorage
 from src.main.enums import BookStatus
-from src.modules.books.schemas import BookResponse
+from src.modules.books.schemas import BookCreateRequest, BookResponse
 
 
 class BookStorage(PostgresStorage[Book]):
@@ -17,11 +18,24 @@ class BookStorage(PostgresStorage[Book]):
         result = await self._db.execute(select(Book))
         return [BookResponse.model_validate(el) for el in result.scalars().all()]
 
-    async def create(self, book_id: Book) -> Book:
-        self._db.add(book_id)
+    async def create(self, data: BookCreateRequest) -> Book:
+        authors = (await self._db.scalars(select(Author).where(Author.id.in_(data.authors)))).all()
+
+        if len(authors) != len(data.authors):
+            msg = "One or more authors not found"
+            raise ValueError(msg)
+
+        book = Book(
+            title=data.title,
+            genre=data.genre,
+            status=BookStatus.CREATED,
+            authors=list(authors),
+        )
+
+        self._db.add(book)
         await self._db.flush()
-        await self._db.refresh(book_id)
-        return book_id
+        await self._db.refresh(book)
+        return book
 
     async def update_status(
         self,
