@@ -3,11 +3,12 @@ from collections.abc import AsyncIterator
 from random import SystemRandom as Random
 from typing import Annotated, Any
 
+from faker import Faker
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infra.postgres.models import Book
+from src.infra.postgres.models import Author, Book
 from src.infra.postgres.pg import transaction
 from src.main.app_config import AppSettings, get_settings
 from src.main.enums import BookStatus
@@ -20,6 +21,7 @@ class PaymentError(Exception):
 class ClientCallController:
     def __init__(self, app_settings: AppSettings) -> None:
         self.app_settings = app_settings
+        self.faker = Faker()
 
     @staticmethod
     async def choose_from_list(items: list[Any]) -> Any:
@@ -81,6 +83,33 @@ class ClientCallController:
             ) from err
         await self.update_books_status(session=session, books=books)
         await self.session_commit(session=session)
+
+    async def seed_authors_with_books(
+        self,
+        *,
+        session: AsyncSession,
+        authors_count: int,
+        books_per_author: int,
+    ) -> tuple[int, int]:
+        created_authors = 0
+        created_books = 0
+        for _ in range(authors_count):
+            author = Author(name=self.faker.name())
+            session.add(author)
+            created_authors += 1
+
+            for _ in range(books_per_author):
+                book = Book(
+                    title=self.faker.sentence(nb_words=4).rstrip("."),
+                    genre=self.faker.word(),
+                    status=BookStatus.CREATED,
+                    authors=[author],
+                )
+                session.add(book)
+                created_books += 1
+
+        await session.flush()
+        return created_authors, created_books
 
 
 async def get_controller() -> AsyncIterator[ClientCallController]:
