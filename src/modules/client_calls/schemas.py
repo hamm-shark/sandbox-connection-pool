@@ -1,8 +1,18 @@
-from pydantic import BaseModel
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
 
 
 class ClintCallSession(BaseModel):
     session_nums: int | None = None
+
+
+class BookResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    status: str
 
 
 class SeedBooksRequest(BaseModel):
@@ -13,3 +23,8 @@ class SeedBooksRequest(BaseModel):
 class SeedBooksResponse(BaseModel):
     authors_created: int
     books_created: int
+
+
+class CleanDbResponse(BaseModel):
+    authors_deleted: int
+    books_deleted: int

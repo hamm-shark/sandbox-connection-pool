@@ -3,24 +3,31 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from src.infra.postgres.models import Book
 from src.infra.postgres.pg import transaction
 from src.modules.client_calls.controller import ConnectionControllerDep
-from src.modules.client_calls.schemas import ClintCallSession, SeedBooksRequest, SeedBooksResponse
+from src.modules.client_calls.schemas import (
+    BookResponse,
+    CleanDbResponse,
+    ClintCallSession,
+    SeedBooksRequest,
+    SeedBooksResponse,
+)
 
 router = APIRouter(prefix="/client-call", tags=["client-call"])
 
 
 @router.get("/in-session/no-transaction")
-async def get_book_no_transaction(controller: ConnectionControllerDep) -> list[Book]:
+async def get_book_no_transaction(controller: ConnectionControllerDep) -> list[BookResponse]:
     async with transaction() as session:
         books = await controller.read_books(session=session)
         await controller.call_billing()
-        return books
+        return [BookResponse.model_validate(book) for book in books]
 
 
 @router.post("/in-session/sequential/no-transaction")
-async def get_book_sequential_no_transaction(body: ClintCallSession, controller: ConnectionControllerDep) -> list[Book]:
+async def get_book_sequential_no_transaction(
+    body: ClintCallSession, controller: ConnectionControllerDep
+) -> list[BookResponse]:
     session_nums = body.session_nums
     if session_nums is None:
         session_nums = await controller.choose_from_list(controller.app_settings.SESSION_NUMBERS)
@@ -29,7 +36,7 @@ async def get_book_sequential_no_transaction(body: ClintCallSession, controller:
         async with transaction() as session:
             books = await controller.read_books(session=session)
             await controller.call_billing()
-    return books
+    return [BookResponse.model_validate(book) for book in books]
 
 
 @router.post("/in-session/parallel/no-transaction")
@@ -64,7 +71,19 @@ async def seed_authors_with_books(
             authors_count=body.authors_count,
             books_per_author=body.books_per_author,
         )
+        await controller.session_commit(session=session)
         return SeedBooksResponse(
             authors_created=authors_created,
             books_created=books_created,
+        )
+
+
+@router.delete("/seed")
+async def clean_seeded_data(controller: ConnectionControllerDep) -> CleanDbResponse:
+    async with transaction() as session:
+        authors_deleted, books_deleted = await controller.clean_db(session=session)
+        await controller.session_commit(session=session)
+        return CleanDbResponse(
+            authors_deleted=authors_deleted,
+            books_deleted=books_deleted,
         )

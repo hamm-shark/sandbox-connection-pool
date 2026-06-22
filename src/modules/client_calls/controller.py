@@ -5,10 +5,10 @@ from typing import Annotated, Any
 
 from faker import Faker
 from fastapi import Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.infra.postgres.models import Author, Book
+from src.infra.postgres.models import Author, Book, M2MBooksAuthors
 from src.infra.postgres.pg import transaction
 from src.main.app_config import AppSettings, get_settings
 from src.main.enums import BookStatus
@@ -38,6 +38,16 @@ class ClientCallController:
         stmt = select(Book)
         result = await session.execute(stmt)
         return list(result.scalars().all())
+
+    @staticmethod
+    async def clean_db(*, session: AsyncSession) -> tuple[int, int]:
+        books_deleted = (await session.scalar(select(func.count()).select_from(Book))) or 0
+        authors_deleted = (await session.scalar(select(func.count()).select_from(Author))) or 0
+        await session.execute(delete(M2MBooksAuthors))
+        await session.execute(delete(Book))
+        await session.execute(delete(Author))
+        await session.flush()
+        return authors_deleted, books_deleted
 
     async def make_payment(self, seconds: int | None = None) -> None:
         """Симулирует сетевой запрос"""
