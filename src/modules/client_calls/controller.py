@@ -14,8 +14,23 @@ from src.main.app_config import AppSettings, get_settings
 from src.main.enums import BookStatus
 
 
-class PaymentError(Exception):
+class ClientCallError(Exception):
+    message = "Client call failed"
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(message or self.message)
+
+
+class PaymentError(ClientCallError):
     """Имитация ошибки платежного сервиса."""
+
+    message: str = "Payment service is unavailable"
+
+
+class DomesticServiceError(ClientCallError):
+    """Имитация ошибки работы сервиса."""
+
+    message: str = "Domestic service is unavailable"
 
 
 class ClientCallController:
@@ -26,6 +41,12 @@ class ClientCallController:
     @staticmethod
     async def choose_from_list(items: list[Any]) -> Any:
         return Random().choice(items)
+
+    @staticmethod
+    async def session_flush(
+        session: AsyncSession,
+    ) -> None:
+        await session.flush()
 
     @staticmethod
     async def session_commit(
@@ -39,54 +60,64 @@ class ClientCallController:
         result = await session.execute(stmt)
         return list(result.scalars().all())
 
-    @staticmethod
-    async def clean_db(*, session: AsyncSession) -> tuple[int, int]:
+    async def clean_db(self, *, session: AsyncSession) -> tuple[int, int]:
         books_deleted = (await session.scalar(select(func.count()).select_from(Book))) or 0
         authors_deleted = (await session.scalar(select(func.count()).select_from(Author))) or 0
         await session.execute(delete(M2MBooksAuthors))
         await session.execute(delete(Book))
         await session.execute(delete(Author))
-        await session.flush()
+        await self.session_flush(session)
         return authors_deleted, books_deleted
 
-    async def make_payment(self, seconds: int | None = None) -> None:
-        """Симулирует сетевой запрос"""
+    async def get_session_nums(self, session_nums: int | None) -> int:
+        if session_nums is None:
+            session_nums = await self.choose_from_list(self.app_settings.SESSION_NUMBERS)
+        return session_nums
+
+    async def process_nothing(self, seconds: int | None) -> None:
         delay = seconds
         if delay is None:
             delay = await self.choose_from_list(self.app_settings.PAYMENTS_PROCESS_IN_SECONDS)
         await sleep(delay=delay)
 
-        if Random().random() < self.app_settings.PAYMENT_FAILURE_RATE:
-            msg = "Payment service is unavailable"
-            raise PaymentError(msg)
+    async def do_payment(self, seconds: int | None = None) -> None:
+        """Симулирует сетевой запрос"""
+        exc_type = PaymentError
+        failure_rate = self.app_settings.PAYMENT_FAILURE_RATE
+        await self.do_work(seconds, failure_rate, exc_type)
+
+    async def do_household_chores(self, seconds: int | None = None) -> None:
+        """Симулирует работу внутреннего сервиса"""
+        exc_type = DomesticServiceError
+        failure_rate = self.app_settings.DOMESTIC_FAILURE_RATE
+        await self.do_work(seconds, failure_rate, exc_type)
+
+    async def do_work(self, seconds: int | None, failure_rate: float, exc_type: type[ClientCallError]) -> None:
+        await self.process_nothing(seconds=seconds)
+        if Random().random() < failure_rate:
+            raise exc_type()
 
     async def worker(
         self,
     ) -> list[Book]:
         async with transaction() as session:
-            books = await self.read_books(session=session)
-            await self.call_billing()
-            return books
+            return await self.get_books(session=session)
 
     async def worker_for_update(
         self,
     ) -> list[Book]:
         async with transaction() as session:
-            books = await self.read_books(session=session)
-            await self.sync_books(session=session, books=books)
-            books = await self.read_books(session=session)
-            await self.session_commit(session=session)
-            return books
+            return await self.update_books(session=session)
 
     async def update_books_status(self, *, session: AsyncSession, books: list[Book]) -> None:
         available_statuses = list(BookStatus)
         for book in books:
             book.status = await self.choose_from_list(available_statuses)
-        await session.flush()
+        await self.session_flush(session)
 
     async def call_billing(self) -> None:
         try:
-            await self.make_payment()
+            await self.do_payment()
         except PaymentError as err:
             raise HTTPException(
                 status_code=400,
@@ -95,13 +126,14 @@ class ClientCallController:
 
     async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> None:
         try:
-            await self.make_payment()
+            await self.do_payment()
         except PaymentError as err:
             raise HTTPException(
                 status_code=400,
                 detail="Payment service is unavailable",
             ) from err
         await self.update_books_status(session=session, books=books)
+        await self.session_commit(session=session)
 
     async def seed_authors_with_books(
         self,
@@ -127,8 +159,20 @@ class ClientCallController:
                 session.add(book)
                 created_books += 1
 
-        await session.flush()
+        await self.session_flush(session)
         return created_authors, created_books
+
+    async def get_books(self, *, session: AsyncSession) -> list[Book]:
+        books = await self.read_books(session=session)
+        await self.call_billing()
+        await self.do_household_chores()
+        return books
+
+    async def update_books(self, *, session: AsyncSession) -> list[Book]:
+        books = await self.read_books(session=session)
+        await self.sync_books(session=session, books=books)
+        await self.do_household_chores()
+        return await self.read_books(session=session)
 
 
 async def get_controller() -> AsyncIterator[ClientCallController]:

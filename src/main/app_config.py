@@ -62,6 +62,7 @@ class AppSettings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = Field(default=False)
     PAYMENT_FAILURE_RATE: float = 0.1
+    DOMESTIC_FAILURE_RATE: float = 0.01
     SESSION_NUMBERS: list[int] = Field(default=[2, 3, 4])
     PAYMENTS_PROCESS_IN_SECONDS: list[int] = Field(default=[2, 3, 5, 9, 10])
 

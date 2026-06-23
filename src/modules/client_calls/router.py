@@ -55,33 +55,26 @@ async def clean_seeded_data(controller: ConnectionControllerDep) -> CleanDbRespo
         )
 
 
-@no_tr_router.get("/in-session/no-transaction")
+@no_tr_router.get("/")
 async def get_books(controller: ConnectionControllerDep) -> list[BookResponse]:
     async with transaction() as session:
-        books = await controller.read_books(session=session)
-        await controller.call_billing()
+        books = await controller.get_books(session=session)
         return [BookResponse.model_validate(book) for book in books]
 
 
-@no_tr_router.post("/in-session/sequential/no-transaction")
+@no_tr_router.post("/sequential")
 async def get_books_sequential(body: ClintCallSession, controller: ConnectionControllerDep) -> list[BookResponse]:
-    session_nums = body.session_nums
-    if session_nums is None:
-        session_nums = await controller.choose_from_list(controller.app_settings.SESSION_NUMBERS)
+    session_nums = await controller.get_session_nums(body.session_nums)
 
     for _ in range(session_nums):
         async with transaction() as session:
-            books = await controller.read_books(session=session)
-            await controller.call_billing()
+            books = await controller.get_books(session=session)
     return [BookResponse.model_validate(book) for book in books]
 
 
-@no_tr_router.post("/in-session/parallel/no-transaction")
+@no_tr_router.post("/parallel")
 async def get_books_parallel(body: ClintCallSession, controller: ConnectionControllerDep) -> dict[str, Any]:
-    session_nums = body.session_nums
-
-    if session_nums is None:
-        session_nums = await controller.choose_from_list(controller.app_settings.SESSION_NUMBERS)
+    session_nums = await controller.get_session_nums(body.session_nums)
 
     result = await gather(
         *(controller.worker() for _ in range(session_nums)),
@@ -98,34 +91,23 @@ async def get_books_parallel(body: ClintCallSession, controller: ConnectionContr
 @tr_router.get("/in-session/transaction")
 async def update_book(controller: ConnectionControllerDep) -> list[BookResponse]:
     async with transaction() as session:
-        books = await controller.read_books(session=session)
-        await controller.sync_books(session=session, books=books)
-        books = await controller.read_books(session=session)
-        await controller.session_commit(session=session)
+        books = await controller.get_books(session=session)
         return [BookResponse.model_validate(book) for book in books]
 
 
 @tr_router.post("/in-session/sequential/transaction")
 async def update_books_sequential(body: ClintCallSession, controller: ConnectionControllerDep) -> list[BookResponse]:
-    session_nums = body.session_nums
-    if session_nums is None:
-        session_nums = await controller.choose_from_list(controller.app_settings.SESSION_NUMBERS)
+    session_nums = await controller.get_session_nums(body.session_nums)
 
     for _ in range(session_nums):
         async with transaction() as session:
-            books = await controller.read_books(session=session)
-            await controller.sync_books(session=session, books=books)
-            books = await controller.read_books(session=session)
-            await controller.session_commit(session=session)
+            books = await controller.get_books(session=session)
     return [BookResponse.model_validate(book) for book in books]
 
 
 @tr_router.post("/in-session/parallel/transaction")
 async def update_books_parallel(body: ClintCallSession, controller: ConnectionControllerDep) -> dict[str, Any]:
-    session_nums = body.session_nums
-
-    if session_nums is None:
-        session_nums = await controller.choose_from_list(controller.app_settings.SESSION_NUMBERS)
+    session_nums = await controller.get_session_nums(body.session_nums)
 
     result = await gather(
         *(controller.worker_for_update() for _ in range(session_nums)),
