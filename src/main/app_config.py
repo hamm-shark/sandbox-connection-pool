@@ -52,6 +52,19 @@ class DataBaseSettings(BaseSettings):
         )
 
 
+class ConnectionPoolSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="CONN_POLL_",
+        env_file=ENV_FILE,
+        extra="ignore",
+    )
+
+    POOL_SIZE: int = 40
+    MAX_OVERFLOW: int = 0
+    POOL_TIMEOUT: int = 30
+    POOL_RECYCLE: int = 3600
+
+
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="APP_",
@@ -67,3 +80,4 @@ class AppSettings(BaseSettings):
     PAYMENTS_PROCESS_IN_SECONDS: list[int] = Field(default=[2, 3, 5, 9, 10])
 
     db: DataBaseSettings = DataBaseSettings()
+    conn_pool: ConnectionPoolSettings = ConnectionPoolSettings()

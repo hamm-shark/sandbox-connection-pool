@@ -98,6 +98,15 @@ class BookPaymentBaseController:
                 detail=err.message,
             ) from err
 
+    async def call_domestic_service(self) -> None:
+        try:
+            await self.do_household_chores()
+        except DomesticServiceError as err:
+            raise HTTPException(
+                status_code=400,
+                detail=err.message,
+            ) from err
+
     async def update_books_status(self, *, session: AsyncSession, books: list[Book]) -> None:
         available_statuses = list(BookStatus)
         for book in books:

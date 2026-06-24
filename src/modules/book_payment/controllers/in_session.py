@@ -1,13 +1,13 @@
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.infra.postgres.models import Book
 from src.infra.postgres.pg import transaction
 from src.main.app_config import AppSettings, get_settings
-from src.modules.base.controller import BookPaymentBaseController, PaymentError
+from src.modules.base.controller import BookPaymentBaseController
 
 
 class BookPaymentInSessionController(BookPaymentBaseController):
@@ -25,24 +25,18 @@ class BookPaymentInSessionController(BookPaymentBaseController):
     async def get_books(self, *, session: AsyncSession) -> list[Book]:
         books = await self.read_books(session=session)
         await self.call_billing()
-        await self.do_household_chores()
+        await self.call_domestic_service()
         return books
 
     async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> None:
-        try:
-            await self.do_payment()
-        except PaymentError as err:
-            raise HTTPException(
-                status_code=400,
-                detail=err.message,
-            ) from err
+        await self.call_billing()
         await self.update_books_status(session=session, books=books)
         await self.session_commit(session=session)
 
     async def update_books(self, *, session: AsyncSession) -> list[Book]:
         books = await self.read_books(session=session)
         await self.sync_books(session=session, books=books)
-        await self.do_household_chores()
+        await self.call_domestic_service()
         return await self.read_books(session=session)
 
 

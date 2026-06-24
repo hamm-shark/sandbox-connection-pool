@@ -61,7 +61,7 @@ async def update_books_sequential(
     session_nums = await controller.get_session_nums(body.session_nums)
     books = []
     for _ in range(session_nums):
-        books = await controller.get_books()
+        books = await controller.update_books()
     return books
 
 
