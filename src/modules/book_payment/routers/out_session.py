@@ -49,7 +49,7 @@ async def get_books_parallel(body: ClintCallSession, controller: BookPaymentOutS
     }
 
 
-@tr_router.get("/transaction")
+@tr_router.get("/")
 async def update_book(controller: BookPaymentOutSessionControllerDep) -> list[BookResponse]:
     return await controller.update_books()
 

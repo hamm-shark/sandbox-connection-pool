@@ -12,6 +12,15 @@ from src.main.routers import init_routers
 logger = logging.getLogger("app")
 
 
+@contextlib.asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    logger.info("Application is starting...")
+    logger.info("Application has started")
+    yield
+    await engine.dispose()
+    logger.info("Application has stopped")
+
+
 def create_app() -> FastAPI:
     settings: AppSettings = get_settings(AppSettings)
     configure_logging(settings.LOG_LEVEL)
@@ -21,12 +30,3 @@ def create_app() -> FastAPI:
     )
     init_routers(app)
     return app
-
-
-@contextlib.asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    logger.info("Application is starting...")
-    logger.info("Application has started")
-    yield
-    await engine.dispose()
-    logger.info("Application has stopped")

@@ -69,7 +69,7 @@ class BookPaymentBaseController:
     async def process_nothing(self, seconds: int | None) -> None:
         delay = seconds
         if delay is None:
-            delay = await self.choose_from_list(self.app_settings.PAYMENTS_PROCESS_IN_SECONDS)
+            delay = await self.choose_from_list(self.app_settings.PROCESS_DELAYS)
         await sleep(delay=delay)
 
     async def do_payment(self, seconds: int | None = None) -> None:

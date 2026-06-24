@@ -31,13 +31,15 @@ class BookPaymentInSessionController(BookPaymentBaseController):
     async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> None:
         await self.call_billing()
         await self.update_books_status(session=session, books=books)
-        await self.session_commit(session=session)
+        await self.session_flush(session=session)
 
     async def update_books(self, *, session: AsyncSession) -> list[Book]:
         books = await self.read_books(session=session)
         await self.sync_books(session=session, books=books)
         await self.call_domestic_service()
-        return await self.read_books(session=session)
+        books = await self.read_books(session=session)
+        await self.session_commit(session=session)
+        return books
 
 
 async def get_controller() -> AsyncIterator[BookPaymentInSessionController]:

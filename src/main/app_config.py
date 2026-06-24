@@ -72,12 +72,13 @@ class AppSettings(BaseSettings):
         extra="ignore",
     )
 
-    LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
+    LOG_LEVEL: str = "INFO"
+    USE_SA_CONNECTION_POOL: bool = True
     PAYMENT_FAILURE_RATE: float = 0.1
     DOMESTIC_FAILURE_RATE: float = 0.01
     SESSION_NUMBERS: list[int] = Field(default=[2, 3, 4])
-    PAYMENTS_PROCESS_IN_SECONDS: list[int] = Field(default=[2, 3, 5, 9, 10])
+    PROCESS_DELAYS: list[float] = Field(default=[2, 3, 5, 9, 10])
 
     db: DataBaseSettings = DataBaseSettings()
     conn_pool: ConnectionPoolSettings = ConnectionPoolSettings()
