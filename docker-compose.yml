@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: sandbox-connection-pool-local-db
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+
+    ports:
+      - "${DB_PORT}:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: sandbox-pgbouncer
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 500
+      DEFAULT_POOL_SIZE: 20
+      RESERVE_POOL_SIZE: 5
+
+      AUTH_TYPE: plain
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
+
+      ADMIN_USERS: ${DB_USER}
+      STATS_USERS: ${DB_USER}
+    ports:
+      - "6432:5432"
+
+volumes:
+  postgres_data:
