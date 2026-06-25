@@ -3,8 +3,9 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class ClintCallSession(BaseModel):
+class ClintCallRequest(BaseModel):
     session_nums: int | None = None
+    limit: int = 100
 
 
 class BookResponse(BaseModel):

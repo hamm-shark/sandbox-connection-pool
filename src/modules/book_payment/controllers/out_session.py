@@ -14,12 +14,13 @@ class BookPaymentOutSessionController(BookPaymentBaseController):
     def __init__(self, app_settings: AppSettings) -> None:
         super().__init__(app_settings)
 
-    async def get_books(self) -> list[BookResponse]:
+    async def get_books(self, limit: int) -> list[BookResponse]:
         async with transaction() as session:
             books = await self.read_books(session=session)
         await self.call_billing()
         await self.call_domestic_service()
-        return [BookResponse.model_validate(book) for book in books]
+        book_responses = [BookResponse.model_validate(book) for book in books]
+        return book_responses[:limit]
 
     async def sync_books(self, *, books: list[Book]) -> None:
         await self.call_billing()
@@ -27,12 +28,13 @@ class BookPaymentOutSessionController(BookPaymentBaseController):
             await self.update_books_status(session=session, books=books)
             await self.session_commit(session=session)
 
-    async def update_books(self) -> list[BookResponse]:
+    async def update_books(self, limit: int) -> list[BookResponse]:
         async with transaction() as session:
             books = await self.read_books(session=session)
         await self.sync_books(books=books)
         await self.call_domestic_service()
-        return [BookResponse.model_validate(book) for book in books]
+        book_responses = [BookResponse.model_validate(book) for book in books]
+        return book_responses[:limit]
 
 
 async def get_controller() -> AsyncIterator[BookPaymentOutSessionController]:
