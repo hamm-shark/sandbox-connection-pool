@@ -1,4 +1,4 @@
-from asyncio import sleep
+import asyncio
 from dataclasses import dataclass
 from random import SystemRandom as Random
 from typing import Any
@@ -30,6 +30,10 @@ class BookPaymentBaseController:
         return Random().choice(items)
 
     @staticmethod
+    async def get_random_value() -> float | int:
+        return Random().random()
+
+    @staticmethod
     async def session_flush(session: AsyncSession) -> None:
         await session.flush()
 
@@ -48,33 +52,37 @@ class BookPaymentBaseController:
             session_nums = await self.choose_from_list(self.app_settings.SESSION_NUMBERS)
         return session_nums
 
-    async def process_nothing(self, seconds: float | None) -> None:
-        delay = seconds
+    async def process_nothing(self, duration: float | None) -> None:
+        delay = duration
         if delay is None:
             delay = await self.choose_from_list(self.app_settings.DEFAULT_PROCESS_DELAYS)
-        await sleep(delay=delay)
+        await asyncio.sleep(delay=delay)
 
-    async def do_payment(self, seconds: float | None = None) -> None:
+    async def do_payment(self, duration: float | None = None) -> None:
         """Симулирует сетевой запрос"""
         exc_type = PaymentError
         failure_rate = self.app_settings.PAYMENT_FAILURE_RATE
-        await self.do_work(seconds, failure_rate, exc_type)
+        await self.do_work(duration, failure_rate, exc_type)
 
-    async def do_household_chores(self, seconds: float | None = None) -> None:
+    async def do_household_chores(self, duration: float | None = None) -> None:
         """Симулирует работу внутреннего сервиса"""
         exc_type = DomesticServiceError
         failure_rate = self.app_settings.DOMESTIC_FAILURE_RATE
-        await self.do_work(seconds, failure_rate, exc_type)
+        await self.do_work(duration, failure_rate, exc_type)
 
-    async def do_work(self, seconds: float | None, failure_rate: float, exc_type: type[ClientCallError]) -> None:
-        await self.process_nothing(seconds=seconds)
-        if Random().random() < failure_rate:
+    async def raise_failure(self, failure_rate: float, exc_type: type[ClientCallError]) -> None:
+        failure_value = await self.get_random_value()
+        if failure_value < failure_rate:
             raise exc_type()
+
+    async def do_work(self, duration: float | None, failure_rate: float, exc_type: type[ClientCallError]) -> None:
+        await self.process_nothing(duration=duration)
+        await self.raise_failure(failure_rate, exc_type)
 
     async def call_billing(self) -> None:
         try:
             process_delay = await self.choose_from_list(self.app_settings.PAYMENT_DELAYS)
-            await self.do_payment(seconds=process_delay)
+            await self.do_payment(duration=process_delay)
         except PaymentError as err:
             raise HTTPException(
                 status_code=400,
@@ -84,7 +92,7 @@ class BookPaymentBaseController:
     async def call_domestic_service(self) -> None:
         try:
             process_delay = await self.choose_from_list(self.app_settings.DOMESTIC_DELAYS)
-            await self.do_household_chores(seconds=process_delay)
+            await self.do_household_chores(duration=process_delay)
         except DomesticServiceError as err:
             raise HTTPException(
                 status_code=400,
