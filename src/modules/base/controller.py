@@ -12,30 +12,12 @@ from src.infra.postgres.models import Book
 from src.infra.postgres.transaction_manager import TransactionManager
 from src.main.app_config import AppSettings
 from src.main.enums import BookStatus
+from src.modules.book_payment.exceptions import ClientCallError, DomesticServiceError, PaymentError
 
 
 @dataclass(slots=True)
 class BaseController:
     tr_manager: TransactionManager
-
-
-class ClientCallError(Exception):
-    message = "Client call failed"
-
-    def __init__(self, message: str | None = None) -> None:
-        super().__init__(message or self.message)
-
-
-class PaymentError(ClientCallError):
-    """Имитация ошибки платежного сервиса."""
-
-    message: str = "Payment service is unavailable"
-
-
-class DomesticServiceError(ClientCallError):
-    """Имитация ошибки работы сервиса."""
-
-    message: str = "Domestic service is unavailable"
 
 
 class BookPaymentBaseController:
@@ -66,32 +48,33 @@ class BookPaymentBaseController:
             session_nums = await self.choose_from_list(self.app_settings.SESSION_NUMBERS)
         return session_nums
 
-    async def process_nothing(self, seconds: int | None) -> None:
+    async def process_nothing(self, seconds: float | None) -> None:
         delay = seconds
         if delay is None:
-            delay = await self.choose_from_list(self.app_settings.PROCESS_DELAYS)
+            delay = await self.choose_from_list(self.app_settings.DEFAULT_PROCESS_DELAYS)
         await sleep(delay=delay)
 
-    async def do_payment(self, seconds: int | None = None) -> None:
+    async def do_payment(self, seconds: float | None = None) -> None:
         """Симулирует сетевой запрос"""
         exc_type = PaymentError
         failure_rate = self.app_settings.PAYMENT_FAILURE_RATE
         await self.do_work(seconds, failure_rate, exc_type)
 
-    async def do_household_chores(self, seconds: int | None = None) -> None:
+    async def do_household_chores(self, seconds: float | None = None) -> None:
         """Симулирует работу внутреннего сервиса"""
         exc_type = DomesticServiceError
         failure_rate = self.app_settings.DOMESTIC_FAILURE_RATE
         await self.do_work(seconds, failure_rate, exc_type)
 
-    async def do_work(self, seconds: int | None, failure_rate: float, exc_type: type[ClientCallError]) -> None:
+    async def do_work(self, seconds: float | None, failure_rate: float, exc_type: type[ClientCallError]) -> None:
         await self.process_nothing(seconds=seconds)
         if Random().random() < failure_rate:
             raise exc_type()
 
     async def call_billing(self) -> None:
         try:
-            await self.do_payment()
+            process_delay = await self.choose_from_list(self.app_settings.PAYMENT_DELAYS)
+            await self.do_payment(seconds=process_delay)
         except PaymentError as err:
             raise HTTPException(
                 status_code=400,
@@ -100,7 +83,8 @@ class BookPaymentBaseController:
 
     async def call_domestic_service(self) -> None:
         try:
-            await self.do_household_chores()
+            process_delay = await self.choose_from_list(self.app_settings.DOMESTIC_DELAYS)
+            await self.do_household_chores(seconds=process_delay)
         except DomesticServiceError as err:
             raise HTTPException(
                 status_code=400,

@@ -78,7 +78,9 @@ class AppSettings(BaseSettings):
     PAYMENT_FAILURE_RATE: float = 0.1
     DOMESTIC_FAILURE_RATE: float = 0.01
     SESSION_NUMBERS: list[int] = Field(default=[2, 3, 4])
-    PROCESS_DELAYS: list[float] = Field(default=[2, 3, 5, 9, 10])
+    PAYMENT_DELAYS: list[float] = Field(default=[2, 3, 5, 9, 10])
+    DOMESTIC_DELAYS: list[float] = Field(default=[2, 3, 5, 9, 10])
+    DEFAULT_PROCESS_DELAYS: list[float] = Field(default=[2, 3, 5, 9, 10])
 
     db: DataBaseSettings = DataBaseSettings()
     conn_pool: ConnectionPoolSettings = ConnectionPoolSettings()
