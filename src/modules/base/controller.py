@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from random import SystemRandom as Random
 from typing import Any
@@ -15,6 +17,8 @@ from src.main.app_config import AppSettings
 from src.main.enums import BookStatus
 from src.modules.book_payment.exceptions import ClientCallError, DomesticServiceError, PaymentError
 
+logger = logging.getLogger("app")
+
 
 @dataclass(slots=True)
 class BaseController:
@@ -27,7 +31,7 @@ class BookPaymentBaseController:
         self.faker = Faker()
 
     @staticmethod
-    async def choose_from_list(items: list[Any]) -> Any:
+    async def choose_from_list(items: Sequence[Any]) -> Any:
         return Random().choice(items)
 
     @staticmethod
@@ -42,9 +46,17 @@ class BookPaymentBaseController:
     async def session_commit(session: AsyncSession) -> None:
         await session.commit()
 
-    @staticmethod
-    async def read_books(*, session: AsyncSession) -> list[Book]:
-        stmt = select(Book).options(joinedload(Book.authors))
+    async def get_successful_status(self) -> BookStatus:
+        return await self.choose_from_list(BookStatus.successful())
+
+    async def get_failed_status(self) -> BookStatus:
+        return await self.choose_from_list(BookStatus.failed())
+
+    async def read_books(self, *, session: AsyncSession, limit: int) -> list[Book]:
+        status_group = await self.choose_from_list(
+            [BookStatus.failed(), BookStatus.successful(), (BookStatus.ARCHIVED,)]
+        )
+        stmt = select(Book).options(joinedload(Book.authors)).where(Book.status.in_(status_group)).limit(limit)
         result = await session.execute(stmt)
         return list(result.scalars().unique().all())
 
@@ -100,8 +112,16 @@ class BookPaymentBaseController:
                 detail=err.message,
             ) from err
 
+    async def set_book_status(self, book: Book) -> None:
+        if book.status in BookStatus.successful():
+            book.status = await self.get_failed_status()
+        elif book.status in BookStatus.failed() or book.status == BookStatus.ARCHIVED:
+            book.status = await self.get_successful_status()
+        archiving_chance = await self.get_random_value()
+        if archiving_chance > self.app_settings.ARCHIVED_STATUS_RATE:
+            book.status = BookStatus.ARCHIVED
+
     async def update_books_status(self, *, session: AsyncSession, books: list[Book]) -> None:
-        available_statuses = list(BookStatus)
         for book in books:
-            book.status = await self.choose_from_list(available_statuses)
+            await self.set_book_status(book)
         await self.session_flush(session)

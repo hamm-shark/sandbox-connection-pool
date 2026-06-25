@@ -24,11 +24,10 @@ class BookPaymentInSessionController(BookPaymentBaseController):
             return await self.update_books(session=session, limit=limit)
 
     async def get_books(self, *, session: AsyncSession, limit: int) -> list[BookResponse]:
-        books = await self.read_books(session=session)
+        books = await self.read_books(session=session, limit=limit)
         await self.call_billing()
         await self.call_domestic_service()
-        book_responses = [BookResponse.model_validate(book) for book in books]
-        return book_responses[:limit]
+        return [BookResponse.model_validate(book) for book in books]
 
     async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> None:
         await self.call_billing()
@@ -36,13 +35,12 @@ class BookPaymentInSessionController(BookPaymentBaseController):
         await self.session_flush(session=session)
 
     async def update_books(self, *, session: AsyncSession, limit: int) -> list[BookResponse]:
-        books = await self.read_books(session=session)
+        books = await self.read_books(session=session, limit=limit)
         await self.sync_books(session=session, books=books)
         await self.call_domestic_service()
-        books = await self.read_books(session=session)
+        books = await self.read_books(session=session, limit=limit)
         await self.session_commit(session=session)
-        book_responses = [BookResponse.model_validate(book) for book in books]
-        return book_responses[:limit]
+        return [BookResponse.model_validate(book) for book in books]
 
 
 async def get_controller() -> AsyncIterator[BookPaymentInSessionController]:
