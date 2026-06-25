@@ -33,6 +33,7 @@ def get_sa_engine(app_settings: AppSettings) -> AsyncEngine:
         sa_engine = create_async_engine(
             db_dsn,
             poolclass=NullPool,
+            echo=app_settings.db.ECHO,
         )
     return sa_engine
 

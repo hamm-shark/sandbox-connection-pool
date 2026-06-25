@@ -29,18 +29,16 @@ class BookPaymentInSessionController(BookPaymentBaseController):
         await self.call_domestic_service()
         return [BookResponse.model_validate(book) for book in books]
 
-    async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> None:
+    async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> list[Book]:
         await self.call_billing()
-        await self.update_books_status(session=session, books=books)
-        await self.session_flush(session=session)
+        updated_book_ids = await self.update_books_status(session=session, books=books)
+        return await self.read_book_by_ids(session=session, book_ids=updated_book_ids)
 
     async def update_books(self, *, session: AsyncSession, limit: int) -> list[BookResponse]:
         books = await self.read_books(session=session, limit=limit)
-        await self.sync_books(session=session, books=books)
+        updated_books = await self.sync_books(session=session, books=books)
         await self.call_domestic_service()
-        books = await self.read_books(session=session, limit=limit)
-        await self.session_commit(session=session)
-        return [BookResponse.model_validate(book) for book in books]
+        return [BookResponse.model_validate(book) for book in updated_books]
 
 
 async def get_controller() -> AsyncIterator[BookPaymentInSessionController]:
