@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_sa_engine(app_settings: AppSettings) -> AsyncEngine:
+    db_dsn = app_settings.db.dsn
     sa_engine = create_async_engine(
-        app_settings.db.dsn,
+        db_dsn,
         echo=app_settings.db.ECHO,
         connect_args={"connect_timeout": app_settings.db.TIMEOUT},
         poolclass=AsyncAdaptedQueuePool,
@@ -28,9 +29,9 @@ def get_sa_engine(app_settings: AppSettings) -> AsyncEngine:
         pool_recycle=app_settings.conn_pool.POOL_RECYCLE,
     )
 
-    if not app_settings.USE_SA_CONNECTION_POOL:
+    if app_settings.USE_PGBOUNCER_CONN_POOL:
         sa_engine = create_async_engine(
-            app_settings.db.dsn,
+            db_dsn,
             poolclass=NullPool,
         )
     return sa_engine

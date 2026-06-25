@@ -74,7 +74,7 @@ class AppSettings(BaseSettings):
 
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
-    USE_SA_CONNECTION_POOL: bool = True
+    USE_PGBOUNCER_CONN_POOL: bool = True
     PAYMENT_FAILURE_RATE: float | int = 0.1
     DOMESTIC_FAILURE_RATE: float | int = 0.01
     SESSION_NUMBERS: list[int] = Field(default=[2, 3, 4])
