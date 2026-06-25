@@ -7,6 +7,7 @@ from faker import Faker
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from src.infra.postgres.models import Book
 from src.infra.postgres.transaction_manager import TransactionManager
@@ -43,9 +44,9 @@ class BookPaymentBaseController:
 
     @staticmethod
     async def read_books(*, session: AsyncSession) -> list[Book]:
-        stmt = select(Book)
+        stmt = select(Book).options(joinedload(Book.authors))
         result = await session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.scalars().unique().all())
 
     async def get_session_nums(self, session_nums: int | None) -> int:
         if session_nums is None:
