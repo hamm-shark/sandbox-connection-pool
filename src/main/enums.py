@@ -24,4 +24,5 @@ class BookStatus(StrEnum):
             cls.FAILED,
             cls.DRAFT,
             cls.RETRY,
+            cls.ARCHIVED,
         )

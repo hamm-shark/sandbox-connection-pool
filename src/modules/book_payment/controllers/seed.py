@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from itertools import cycle
 from typing import Annotated
 
 from fastapi import Depends
@@ -24,6 +25,7 @@ class BookPaymentSeedController(BookPaymentBaseController):
     ) -> tuple[int, int]:
         created_authors = 0
         created_books = 0
+        statuses = cycle(BookStatus)
         for _ in range(authors_count):
             author = Author(name=self.faker.name())
             session.add(author)
@@ -33,7 +35,7 @@ class BookPaymentSeedController(BookPaymentBaseController):
                 book = Book(
                     title=self.faker.sentence(nb_words=4).rstrip("."),
                     genre=self.faker.word(),
-                    status=BookStatus.CREATED,
+                    status=next(statuses),
                     authors=[author],
                 )
                 session.add(book)

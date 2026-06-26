@@ -60,7 +60,7 @@ class BookPaymentBaseController:
         return self.choose_from_list(BookStatus.failed())
 
     async def read_books(self, *, session: AsyncSession, limit: int) -> list[Book]:
-        status_group = self.choose_from_list([BookStatus.failed(), BookStatus.successful(), (BookStatus.ARCHIVED,)])
+        status_group = self.choose_from_list([BookStatus.failed(), BookStatus.successful()])
         stmt = (
             select(Book)
             .where(Book.status.in_(status_group))
@@ -127,11 +127,8 @@ class BookPaymentBaseController:
         new_status = BookStatus.CREATED
         if book_status in BookStatus.successful():
             new_status = self.get_failed_status()
-        elif book_status in BookStatus.failed() or book_status == BookStatus.ARCHIVED:
+        elif book_status in BookStatus.failed():
             new_status = self.get_successful_status()
-        archiving_chance = self.get_random_value()
-        if archiving_chance < self.app_settings.ARCHIVED_STATUS_RATE:
-            new_status = BookStatus.ARCHIVED
         return new_status
 
     async def update_books_status(
