@@ -12,6 +12,7 @@ if not CSV_FILE.exists():
 
 async def monitor(sa_engine: AsyncEngine, test_name: str) -> None:
     last = None
+    total_conn_min = 5
     while True:
         async with AsyncSession(sa_engine) as session:
             result = await session.execute(
@@ -27,8 +28,8 @@ async def monitor(sa_engine: AsyncEngine, test_name: str) -> None:
             )
 
             total, active, idle, idle_tx = result.one()
-            current = (total, active, idle, idle_tx)
-            if current == last:
+            current = (active, idle, idle_tx)
+            if current == last or total < total_conn_min:
                 continue
             last = current
 

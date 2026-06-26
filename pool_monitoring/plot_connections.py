@@ -3,8 +3,23 @@ import csv
 import matplotlib.pyplot as plt
 
 
-async def get_plot(file: Path, base_dir: Path):
+async def get_plot(file: Path, base_dir: Path, is_avg: bool = False) -> None:
     rows = []
+
+    if is_avg:
+        columns = {
+            "total": "avg_total",
+            "active": "avg_active",
+            "idle": "avg_idle",
+            "idle_tx": "avg_idle_tx",
+        }
+    else:
+        columns = {
+            "total": "total_connections",
+            "active": "active",
+            "idle": "idle",
+            "idle_tx": "idle_in_transaction",
+        }
 
     with file.open() as f:
         reader = csv.DictReader(f)
@@ -13,10 +28,10 @@ async def get_plot(file: Path, base_dir: Path):
                 {
                     "sample": i,
                     "test": row["test"],
-                    "total": int(row["total_connections"]),
-                    "active": int(row["active"]),
-                    "idle": int(row["idle"]),
-                    "idle_tx": int(row["idle_in_transaction"]),
+                    "total": float(row[columns["total"]]),
+                    "active": float(row[columns["active"]]),
+                    "idle": float(row[columns["idle"]]),
+                    "idle_tx": float(row[columns["idle_tx"]]),
                 }
             )
 
@@ -40,6 +55,9 @@ async def get_plot(file: Path, base_dir: Path):
         plt.ylabel("Connections")
         plt.grid(True)
         plt.legend()
+
+        if is_avg:
+            test = f"AVG_{test}"
 
         out = Path(f"{base_dir}/{test}.png")
         plt.tight_layout()
