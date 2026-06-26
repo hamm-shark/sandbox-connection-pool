@@ -1,11 +1,13 @@
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from src.modules.authors.schemas import AuthorBase
 
 
 class BookBase(BaseModel):
     title: str
-    authors: list[UUID]
+    authors: list[AuthorBase]
     genre: str
 
 
@@ -21,3 +23,4 @@ class BookCreateRequest(BookBase):
 
 class BookResponse(BookBase):
     id: UUID
+    model_config = ConfigDict(from_attributes=True)

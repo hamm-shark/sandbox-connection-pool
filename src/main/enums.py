@@ -9,3 +9,20 @@ class BookStatus(StrEnum):
     RETRY = "retry"
     FAILED = "failed"
     ARCHIVED = "archived"
+
+    @classmethod
+    def successful(cls) -> tuple["BookStatus", ...]:
+        return (
+            cls.CREATED,
+            cls.PROCESSING,
+            cls.READY,
+        )
+
+    @classmethod
+    def failed(cls) -> tuple["BookStatus", ...]:
+        return (
+            cls.FAILED,
+            cls.DRAFT,
+            cls.RETRY,
+            cls.ARCHIVED,
+        )

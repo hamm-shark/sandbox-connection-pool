@@ -2,9 +2,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from src.modules.authors.schemas import AuthorResponse
 
-class ClintCallSession(BaseModel):
+
+class ClintCallRequest(BaseModel):
     session_nums: int | None = None
+    limit: int = 25
+
+
+class BookQueryParams(BaseModel):
+    limit: int = 25
 
 
 class BookResponse(BaseModel):
@@ -13,6 +20,7 @@ class BookResponse(BaseModel):
     id: UUID
     title: str
     status: str
+    authors: list[AuthorResponse]
 
 
 class SeedBooksRequest(BaseModel):

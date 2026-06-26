@@ -89,7 +89,7 @@ DB_NAME=sandbox-connection-pool
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_DRIVER=psycopg
-DB_ECHO=false
+DB_ECHO=False
 DB_TIMEOUT=5
 
 # SQLAlchemy connection pool
@@ -99,13 +99,15 @@ CONN_POLL_POOL_TIMEOUT=30
 CONN_POLL_POOL_RECYCLE=3600
 
 # App
-APP_DEBUG=true
+APP_DEBUG=True
 APP_LOG_LEVEL=INFO
-APP_USE_SA_CONNECTION_POOL=true
+APP_USE_PGBOUNCER_CONN_POOL=False
 APP_PAYMENT_FAILURE_RATE=0.1
 APP_DOMESTIC_FAILURE_RATE=0.01
 APP_SESSION_NUMBERS=[2,3,4]
-APP_PROCESS_DELAYS=[2,3,5,9,10]
+APP_PAYMENT_DELAYS=[2,3,5,9,10]
+APP_DOMESTIC_DELAYS=[2,3,5,9,10]
+APP_DEFAULT_PROCESS_DELAYS=[2,3,5,9,10]
 ```
 
 > Если используете PgBouncer из `docker-compose.yml`, укажите для приложения `DB_PORT=6432`, чтобы подключение шло через PgBouncer.

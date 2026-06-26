@@ -73,12 +73,17 @@ class AppSettings(BaseSettings):
     )
 
     DEBUG: bool = False
+    PORT: int = 8000
+    HOST: str = "localhost"
     LOG_LEVEL: str = "INFO"
-    USE_SA_CONNECTION_POOL: bool = True
-    PAYMENT_FAILURE_RATE: float = 0.1
-    DOMESTIC_FAILURE_RATE: float = 0.01
+    ENDPOINT_TYPE: str = "in-session"
+    USE_PGBOUNCER_CONN_POOL: bool = True
+    PAYMENT_FAILURE_RATE: float | int = 0.1
+    DOMESTIC_FAILURE_RATE: float | int = 0.01
     SESSION_NUMBERS: list[int] = Field(default=[2, 3, 4])
-    PROCESS_DELAYS: list[float] = Field(default=[2, 3, 5, 9, 10])
+    PAYMENT_DELAYS: list[float | int] = Field(default=[2, 3, 5, 9, 10])
+    DOMESTIC_DELAYS: list[float | int] = Field(default=[2, 3, 5, 9, 10])
+    DEFAULT_PROCESS_DELAYS: list[float | int] = Field(default=[2, 3, 5, 9, 10])
 
     db: DataBaseSettings = DataBaseSettings()
     conn_pool: ConnectionPoolSettings = ConnectionPoolSettings()

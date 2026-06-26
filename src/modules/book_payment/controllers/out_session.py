@@ -14,25 +14,27 @@ class BookPaymentOutSessionController(BookPaymentBaseController):
     def __init__(self, app_settings: AppSettings) -> None:
         super().__init__(app_settings)
 
-    async def get_books(self) -> list[BookResponse]:
+    async def get_books(self, limit: int) -> list[BookResponse]:
         async with transaction() as session:
-            books = await self.read_books(session=session)
+            books = await self.read_books(session=session, limit=limit)
         await self.call_billing()
         await self.call_domestic_service()
         return [BookResponse.model_validate(book) for book in books]
 
-    async def sync_books(self, *, books: list[Book]) -> None:
+    async def sync_books(self, *, books: list[Book]) -> list[Book]:
         await self.call_billing()
         async with transaction() as session:
-            await self.update_books_status(session=session, books=books)
+            updated_book_ids = await self.update_books_status(session=session, books=books)
+            updated_books = await self.read_book_by_ids(session=session, book_ids=updated_book_ids)
             await self.session_commit(session=session)
+            return updated_books
 
-    async def update_books(self) -> list[BookResponse]:
+    async def update_books(self, limit: int) -> list[BookResponse]:
         async with transaction() as session:
-            books = await self.read_books(session=session)
-        await self.sync_books(books=books)
+            books = await self.read_books(session=session, limit=limit)
+        updated_books = await self.sync_books(books=books)
         await self.call_domestic_service()
-        return [BookResponse.model_validate(book) for book in books]
+        return [BookResponse.model_validate(book) for book in updated_books]
 
 
 async def get_controller() -> AsyncIterator[BookPaymentOutSessionController]:

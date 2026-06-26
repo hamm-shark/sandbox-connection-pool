@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Enum as SQLEnum, ForeignKey
+from sqlalchemy import Enum as SQLEnum, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.infra.postgres.models.base import Base
@@ -31,6 +31,8 @@ class Book(Base):
         back_populates="books",
         lazy="selectin",
     )
+
+    __table_args__ = (Index("ix_books_status_id", "status", "id"),)
 
 
 class M2MBooksAuthors(Base):
