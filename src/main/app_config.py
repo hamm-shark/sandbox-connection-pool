@@ -73,6 +73,8 @@ class AppSettings(BaseSettings):
     )
 
     DEBUG: bool = False
+    PORT: int = 8000
+    HOST: str = "localhost"
     LOG_LEVEL: str = "INFO"
     USE_PGBOUNCER_CONN_POOL: bool = True
     PAYMENT_FAILURE_RATE: float | int = 0.1
