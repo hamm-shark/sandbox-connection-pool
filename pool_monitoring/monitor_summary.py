@@ -36,7 +36,7 @@ async def build_connections_summary(input_file: Path, output_file: Path) -> None
 
 
 async def build_hold_times_summary(input_file: Path, output_file: Path) -> None:
-    df = pd.read_csv(input_file, header=None, names=["hold_time_ms"])
+    df = pd.read_csv(input_file, header=0, names=["hold_time_ms"])
 
     summary = pd.DataFrame(
         {
