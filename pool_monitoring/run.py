@@ -1,0 +1,41 @@
+import asyncio
+
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from src.main.app_config import get_settings, AppSettings
+from pool_monitoring.monitor import monitor
+from pool_monitoring.plot_connections import get_plot
+from src.infra.postgres.pg import engine
+
+from pool_monitoring.monitoring_settings import CSV_FILE, BASE_DIR
+
+
+def get_test_name(settings: AppSettings) -> str:
+    endpoint_type = settings.ENDPOINT_TYPE
+    default_name = "ConnPoolSA"
+    if settings.db.PORT == 6432:
+        default_name = "ConnPoolPgBouncer"
+    if settings.USE_PGBOUNCER_CONN_POOL:
+        default_name += "_NullPool"
+    else:
+        default_name += "_AsyncAdaptedQueuePool"
+    return f"{default_name}: {endpoint_type}"
+
+
+async def run(sa_engine: AsyncEngine, app_settings: AppSettings):
+    print("Start pool monitoring")
+    try:
+        await monitor(sa_engine, get_test_name(app_settings))
+    except OperationalError:
+        print("Database is unavailable")
+    finally:
+        print("Building plots...")
+        await get_plot(CSV_FILE, BASE_DIR)
+        await sa_engine.dispose()
+
+
+try:
+    asyncio.run(run(engine, get_settings(AppSettings)))
+except KeyboardInterrupt:
+    print("Interrupted by user")

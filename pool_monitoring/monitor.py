@@ -3,31 +3,14 @@ import asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
 
-from pool_monitoring.monitoring_settings import CSV_FILE
-from src.main.app_config import get_settings, AppSettings
-from src.infra.postgres.pg import engine
-
-app_settings = get_settings(AppSettings)
-
-
-def get_test_name(settings: AppSettings) -> str:
-    endpoint_type = settings.ENDPOINT_TYPE
-    default_name = "SAConnPool"
-    if settings.db.PORT == 6432:
-        default_name = "pgBouncerConnPool"
-    if settings.USE_PGBOUNCER_CONN_POOL:
-        default_name += "_NullPool"
-    else:
-        default_name += "_AsyncAdaptedQueuePool"
-    return f"{default_name}: {endpoint_type}"
+from pool_monitoring.monitoring_settings import CSV_FILE, HEADERS
 
 
 if not CSV_FILE.exists():
-    CSV_FILE.write_text("test,process_stat,total_connections,active,idle,idle_in_transaction\n")
+    CSV_FILE.write_text(HEADERS)
 
 
 async def monitor(sa_engine: AsyncEngine, test_name: str) -> None:
-    print("Start pool monitoring")
     last = None
     while True:
         async with AsyncSession(sa_engine) as session:
@@ -53,10 +36,3 @@ async def monitor(sa_engine: AsyncEngine, test_name: str) -> None:
                 f.write(f"{test_name},{total},{active},{idle},{idle_tx}\n")
 
         await asyncio.sleep(1)
-
-
-try:
-    asyncio.run(monitor(engine, get_test_name(app_settings)))
-except KeyboardInterrupt:
-    print("Stopping pool monitoring...")
-    asyncio.run(engine.dispose())
