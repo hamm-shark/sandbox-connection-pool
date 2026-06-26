@@ -1,10 +1,10 @@
 from asyncio import gather
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from src.modules.book_payment.controllers.out_session import BookPaymentOutSessionControllerDep
-from src.modules.book_payment.schemas import BookResponse, ClintCallRequest
+from src.modules.book_payment.schemas import BookQueryParams, BookResponse, ClintCallRequest
 
 no_tr_router = APIRouter(
     prefix="/out-session/no-transaction",
@@ -18,8 +18,10 @@ tr_router = APIRouter(
 
 
 @no_tr_router.get("/")
-async def get_books(controller: BookPaymentOutSessionControllerDep, limit: int = 50) -> list[BookResponse]:
-    return await controller.get_books(limit=limit)
+async def get_books(
+    params: Annotated[BookQueryParams, Depends()], controller: BookPaymentOutSessionControllerDep
+) -> list[BookResponse]:
+    return await controller.get_books(limit=params.limit)
 
 
 @no_tr_router.post("/sequential")
@@ -49,8 +51,10 @@ async def get_books_parallel(body: ClintCallRequest, controller: BookPaymentOutS
 
 
 @tr_router.get("/")
-async def update_book(controller: BookPaymentOutSessionControllerDep, limit: int = 50) -> list[BookResponse]:
-    return await controller.update_books(limit=limit)
+async def update_book(
+    params: Annotated[BookQueryParams, Depends()], controller: BookPaymentOutSessionControllerDep
+) -> list[BookResponse]:
+    return await controller.update_books(limit=params.limit)
 
 
 @tr_router.post("/sequential")

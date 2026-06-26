@@ -61,13 +61,7 @@ class BookPaymentBaseController:
 
     async def read_books(self, *, session: AsyncSession, limit: int) -> list[Book]:
         status_group = self.choose_from_list([BookStatus.failed(), BookStatus.successful()])
-        stmt = (
-            select(Book)
-            .where(Book.status.in_(status_group))
-            .order_by(Book.id)
-            .with_for_update(skip_locked=True)
-            .limit(limit)
-        )
+        stmt = select(Book).where(Book.status.in_(status_group)).order_by(Book.id).limit(limit)
         result = await session.execute(stmt)
         return list(result.scalars().all())
 

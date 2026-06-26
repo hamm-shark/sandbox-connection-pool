@@ -7,7 +7,11 @@ from src.modules.authors.schemas import AuthorResponse
 
 class ClintCallRequest(BaseModel):
     session_nums: int | None = None
-    limit: int = 50
+    limit: int = 25
+
+
+class BookQueryParams(BaseModel):
+    limit: int = 25
 
 
 class BookResponse(BaseModel):

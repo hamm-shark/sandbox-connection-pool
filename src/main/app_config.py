@@ -76,6 +76,7 @@ class AppSettings(BaseSettings):
     PORT: int = 8000
     HOST: str = "localhost"
     LOG_LEVEL: str = "INFO"
+    ENDPOINT_TYPE: str = "in-session"
     USE_PGBOUNCER_CONN_POOL: bool = True
     PAYMENT_FAILURE_RATE: float | int = 0.1
     DOMESTIC_FAILURE_RATE: float | int = 0.01
