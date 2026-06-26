@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 
-async def build_summary(input_file: Path, output_file: Path) -> None:
+async def build_connections_summary(input_file: Path, output_file: Path) -> None:
     df = pd.read_csv(input_file)
 
     SAMPLES_PER_RUN = 32
@@ -31,5 +31,20 @@ async def build_summary(input_file: Path, output_file: Path) -> None:
     )
 
     summary = summary.round(2)
+
+    summary.to_csv(output_file, index=False)
+
+
+async def build_hold_times_summary(input_file: Path, output_file: Path) -> None:
+    df = pd.read_csv(input_file, header=None, names=["hold_time_ms"])
+
+    summary = pd.DataFrame(
+        {
+            "samples": [len(df)],
+            "avg_hold_time_ms": [df["hold_time_ms"].mean()],
+            "min_hold_time_ms": [df["hold_time_ms"].min()],
+            "max_hold_time_ms": [df["hold_time_ms"].max()],
+        }
+    ).round(2)
 
     summary.to_csv(output_file, index=False)

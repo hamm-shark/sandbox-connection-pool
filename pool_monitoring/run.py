@@ -7,8 +7,14 @@ from src.main.app_config import get_settings, AppSettings
 from pool_monitoring.monitor import monitor
 from pool_monitoring.plot_connections import get_plot
 from src.infra.postgres.pg import engine
-from pool_monitoring.monitor_summary import build_summary
-from pool_monitoring.monitoring_settings import CSV_FILE, BASE_DIR, SUMMARY_FILE
+from pool_monitoring.monitor_summary import build_connections_summary, build_hold_times_summary
+from pool_monitoring.monitoring_settings import (
+    CSV_FILE,
+    BASE_DIR,
+    SUMMARY_FILE,
+    POOL_MONITOR_FILE,
+    SUMMARY_POOL_MONITOR_FILE,
+)
 
 
 def get_test_name(settings: AppSettings) -> str:
@@ -31,7 +37,8 @@ async def run(sa_engine: AsyncEngine, app_settings: AppSettings):
         print("Database is unavailable")
     finally:
         print("Building plot...")
-        await build_summary(input_file=CSV_FILE, output_file=SUMMARY_FILE)
+        await build_connections_summary(input_file=CSV_FILE, output_file=SUMMARY_FILE)
+        await build_hold_times_summary(input_file=POOL_MONITOR_FILE, output_file=SUMMARY_POOL_MONITOR_FILE)
         await get_plot(CSV_FILE, BASE_DIR)
         await get_plot(SUMMARY_FILE, BASE_DIR, is_avg=True)
         await sa_engine.dispose()
