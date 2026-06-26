@@ -2,7 +2,7 @@ from pathlib import Path
 import csv
 import matplotlib.pyplot as plt
 
-CSV_FILE = Path("connections.csv")
+from pool_monitoring.monitoring_settings import CSV_FILE
 
 rows = []
 

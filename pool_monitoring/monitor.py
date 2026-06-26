@@ -1,13 +1,11 @@
 import asyncio
-from pathlib import Path
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
 
+from pool_monitoring.monitoring_settings import CSV_FILE
 from src.main.app_config import get_settings, AppSettings
 from src.infra.postgres.pg import engine
-
-CSV_FILE = Path("connections.csv")
 
 app_settings = get_settings(AppSettings)
 
