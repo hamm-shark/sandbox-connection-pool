@@ -19,7 +19,7 @@ tr_router = APIRouter(
 
 
 @no_tr_router.get("/")
-async def get_books(controller: BookPaymentInSessionControllerDep, limit: int = 100) -> list[BookResponse]:
+async def get_books(controller: BookPaymentInSessionControllerDep, limit: int = 50) -> list[BookResponse]:
     async with transaction() as session:
         return await controller.get_books(session=session, limit=limit)
 
@@ -52,7 +52,7 @@ async def get_books_parallel(body: ClintCallRequest, controller: BookPaymentInSe
 
 
 @tr_router.get("/")
-async def update_book(controller: BookPaymentInSessionControllerDep, limit: int = 100) -> list[BookResponse]:
+async def update_book(controller: BookPaymentInSessionControllerDep, limit: int = 50) -> list[BookResponse]:
     async with transaction() as session:
         return await controller.update_books(session=session, limit=limit)
 

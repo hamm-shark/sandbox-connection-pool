@@ -2,17 +2,17 @@ import asyncio
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from random import SystemRandom as Random
-from typing import Any, cast
+from typing import Any
 from uuid import UUID
 
 from faker import Faker
 from fastapi import HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from src.infra.postgres.models import Author, Book
+from src.infra.postgres.models import Book
 from src.infra.postgres.transaction_manager import TransactionManager
 from src.main.app_config import AppSettings
 from src.main.enums import BookStatus
@@ -49,7 +49,7 @@ class BookPaymentBaseController:
 
     @staticmethod
     async def read_book_by_ids(*, session: AsyncSession, book_ids: list[UUID]) -> list[Book]:
-        stmt = select(Book).options(selectinload(Book.authors)).where(Book.id.in_(book_ids))
+        stmt = select(Book).where(Book.id.in_(book_ids))
         result = await session.execute(stmt)
         return list(result.scalars().all())
 
@@ -61,7 +61,13 @@ class BookPaymentBaseController:
 
     async def read_books(self, *, session: AsyncSession, limit: int) -> list[Book]:
         status_group = self.choose_from_list([BookStatus.failed(), BookStatus.successful(), (BookStatus.ARCHIVED,)])
-        stmt = select(Book).options(selectinload(Book.authors)).where(Book.status.in_(status_group)).limit(limit)
+        stmt = (
+            select(Book)
+            .where(Book.status.in_(status_group))
+            .order_by(Book.id)
+            .with_for_update(skip_locked=True)
+            .limit(limit)
+        )
         result = await session.execute(stmt)
         return list(result.scalars().all())
 
@@ -128,28 +134,40 @@ class BookPaymentBaseController:
             new_status = BookStatus.ARCHIVED
         return new_status
 
-    async def set_author_name(self, author: Author) -> None:
-        author_name = self.choose_from_list(
-            [self.faker.name_male(), self.faker.name_female(), self.faker.name_nonbinary()]
-        )
-        author.name = author_name
+    async def update_books_status(
+        self,
+        *,
+        session: AsyncSession,
+        books: list[Book],
+    ) -> list[UUID]:
+        if not books:
+            return []
 
-    async def update_books_status(self, *, session: AsyncSession, books: list[Book]) -> list[UUID]:
-        books_to_update = []
+        dt_updated_at = datetime.now(UTC)
+
+        values: list[str] = []
+        params: dict[str, UUID | str | datetime] = {}
         updated_books_ids = []
-        for book in books:
-            new_status = self.set_book_status(book.status)
-            books_to_update.append({"id": book.id, "status": new_status})
+
+        for i, book in enumerate(sorted(books, key=lambda b: b.id)):
+            values.append(f"(:id_{i}, :status_{i}, :updated_at_{i})")
+
+            params[f"id_{i}"] = book.id
+            params[f"status_{i}"] = self.set_book_status(book.status).value
+            params[f"updated_at_{i}"] = dt_updated_at
+
             updated_books_ids.append(book.id)
 
-        # Acquire row locks in deterministic order to avoid lock-order inversion across concurrent requests.
-        ordered_ids = sorted(updated_books_ids)
-        await session.execute(select(Book.id).where(Book.id.in_(ordered_ids)).order_by(Book.id).with_for_update())
-
-        # Keep UPDATE order deterministic as well.
-        ordered_updates = sorted(
-            books_to_update,
-            key=lambda item: cast("UUID", item["id"]),
-        )
-        await session.execute(update(Book), ordered_updates)
+        stmt = text(f"""
+            UPDATE books AS b
+            SET
+                status = v.status::book_status,
+                updated_at = v.updated_at
+            FROM (
+                VALUES
+                    {", ".join(values)}
+            ) AS v(id, status, updated_at)
+            WHERE b.id = v.id::uuid
+        """)
+        await session.execute(stmt, params)
         return updated_books_ids

@@ -32,7 +32,9 @@ class BookPaymentInSessionController(BookPaymentBaseController):
     async def sync_books(self, *, session: AsyncSession, books: list[Book]) -> list[Book]:
         await self.call_billing()
         updated_book_ids = await self.update_books_status(session=session, books=books)
-        return await self.read_book_by_ids(session=session, book_ids=updated_book_ids)
+        updated_books = await self.read_book_by_ids(session=session, book_ids=updated_book_ids)
+        await self.session_commit(session=session)
+        return updated_books
 
     async def update_books(self, *, session: AsyncSession, limit: int) -> list[BookResponse]:
         books = await self.read_books(session=session, limit=limit)
