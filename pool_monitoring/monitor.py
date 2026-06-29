@@ -12,9 +12,8 @@ if not CSV_FILE.exists():
     CSV_FILE.write_text(HEADERS)
 
 
-async def monitor(sa_engine: AsyncEngine, test_name: str) -> None:
+async def monitor(sa_engine: AsyncEngine, test_name: str, total_conn_min: int) -> None:
     last = None
-    total_conn_min = 5
     while True:
         async with AsyncSession(sa_engine) as session:
             result = await session.execute(
