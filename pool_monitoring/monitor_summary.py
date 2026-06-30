@@ -3,18 +3,16 @@ from pathlib import Path
 import pandas as pd
 
 
-async def build_summary(input_file: Path, output_file: Path) -> None:
+async def build_connections_summary(samples_per_run: int, input_file: Path, output_file: Path) -> None:
     df = pd.read_csv(input_file)
 
-    SAMPLES_PER_RUN = 32
-
-    full_rows = (len(df) // SAMPLES_PER_RUN) * SAMPLES_PER_RUN
+    full_rows = (len(df) // samples_per_run) * samples_per_run
     df = df.iloc[:full_rows]
 
     if df.empty:
         return
 
-    df["run"] = df.index // SAMPLES_PER_RUN
+    df["run"] = (df.index // samples_per_run) + 1
     summary = df.groupby("run", as_index=False).agg(
         test=("test", "first"),
         samples=("active", "count"),
@@ -31,5 +29,20 @@ async def build_summary(input_file: Path, output_file: Path) -> None:
     )
 
     summary = summary.round(2)
+
+    summary.to_csv(output_file, index=False)
+
+
+async def build_hold_times_summary(input_file: Path, output_file: Path) -> None:
+    df = pd.read_csv(input_file, header=0, names=["hold_time_ms"])
+
+    summary = pd.DataFrame(
+        {
+            "samples": [len(df)],
+            "avg_hold_time_ms": [df["hold_time_ms"].mean()],
+            "min_hold_time_ms": [df["hold_time_ms"].min()],
+            "max_hold_time_ms": [df["hold_time_ms"].max()],
+        }
+    ).round(2)
 
     summary.to_csv(output_file, index=False)
