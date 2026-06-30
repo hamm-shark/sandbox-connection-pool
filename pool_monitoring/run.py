@@ -10,13 +10,13 @@ from src.infra.postgres.pg import engine
 from pool_monitoring.monitor_summary import build_connections_summary, build_hold_times_summary
 from pool_monitoring.monitoring_settings import (
     CSV_FILE,
-    BASE_DIR,
     SUMMARY_FILE,
     POOL_MONITOR_FILE,
     SUMMARY_POOL_MONITOR_FILE,
     SAMPLES_PER_RUN,
     TOTAL_CONN_MIN,
     PGBOUNCER_PORT,
+    RESULTS_BASE_DIR,
 )
 
 
@@ -42,8 +42,8 @@ async def run(sa_engine: AsyncEngine, app_settings: AppSettings):
         print("Building plot...")
         await build_connections_summary(samples_per_run=SAMPLES_PER_RUN, input_file=CSV_FILE, output_file=SUMMARY_FILE)
         await build_hold_times_summary(input_file=POOL_MONITOR_FILE, output_file=SUMMARY_POOL_MONITOR_FILE)
-        await get_plot(CSV_FILE, BASE_DIR)
-        await get_plot(SUMMARY_FILE, BASE_DIR, is_avg=True)
+        await get_plot(CSV_FILE, RESULTS_BASE_DIR)
+        await get_plot(SUMMARY_FILE, RESULTS_BASE_DIR, is_avg=True)
         await sa_engine.dispose()
 
 
