@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from src.infra.postgres.transaction_manager import PostgresTrManagerDep
+from src.modules.authors.schemas import AuthorBase
 from src.modules.base.controller import BaseController
 from src.modules.books.schemas import BookCreateRequest, BookResponse
 
@@ -20,7 +21,7 @@ class BookController(BaseController):
             id=book.id,
             title=book.title,
             genre=book.genre,
-            authors=[author.id for author in book.authors],
+            authors=[AuthorBase.model_validate(author) for author in book.authors],
         )
 
 
